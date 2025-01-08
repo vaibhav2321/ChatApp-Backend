@@ -5,51 +5,52 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-    const { fullname, email, password } = req.body;
-    cloudinary
+  try {
+      // Destructure the request body
+      const { fullname, email, password } = req.body;
+      
 
-    try {
-        // Validate inputs
-        if (!fullname || !email || !password) {
-            return res.status(400).json({ message: "All fields are required." });
-        }
+      // Validate inputs
+      if (!fullname || !email || !password) {
+        
+          return res.status(400).json({ message: "All fields are required." });
+      }
 
-        if (password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters." });
-        }
+      if (password.length < 6) {
+          return res.status(400).json({ message: "Password must be at least 6 characters long." });
+      }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "User already exists!" });
-        }
+      // Check if the user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+          return res.status(400).json({ message: "User already exists!" });
+      }
 
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+      // Hash the password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      // Create a new user
+      const newUser = new User({
+        fullname,
+        email,
+        password: hashedPassword,
+    });
 
-        // Create a new user
-        const newUser = new User({
-            fullname,
-            email,
-            password: hashedPassword,
-        });
+    // Save the user and generate token
+    await newUser.save();
+    generateToken(newUser._id, res);
 
-        // Save the user and generate token
-        await newUser.save();
-        generateToken(newUser._id, res);
-
-        // Respond with the created user details
-        return res.status(201).json({
-            _id: newUser._id,
-            fullname: newUser.fullname,
-            email: newUser.email,
-            profilePic: newUser.profilePic || null, // Fallback to null if profilePic is undefined
-        });
-    } catch (error) {
-        console.error("Error in signup controller:", error.message);
-        return res.status(500).json({ message: "Internal Server Error" });
-    }
+    // Respond with the created user details
+    return res.status(201).json({
+        _id: newUser._id,
+        fullname: newUser.fullname,
+        email: newUser.email,
+        profilePic: newUser.profilePic || null, // Fallback to null if profilePic is undefined
+    });
+  } catch (error) {
+      console.error("Error in signup controller:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 export const login = async (req, res) => {
@@ -70,7 +71,7 @@ export const login = async (req, res) => {
   
       res.status(200).json({
         _id: user._id,
-        fullName: user.fullName,
+        fullname: user.fullname,
         email: user.email,
         profilePic: user.profilePic,
       });
